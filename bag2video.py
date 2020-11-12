@@ -21,19 +21,17 @@ except ImportError:
         sys.exit(1)
 
 def get_info(bag, topic=None, start_time=rospy.Time(0), stop_time=rospy.Time(sys.maxint)):
-    size = (0,0)
+    size = (720, 540)
     times = []
 
     # read the first message to get the image size
-    msg = bag.read_messages(topics=topic).next()[1]
-    size = (msg.width, msg.height)
+    # msg = bag.read_messages(topics=topic).next()[1]
 
     # now read the rest of the messages for the rates
     iterator = bag.read_messages(topics=topic, start_time=start_time, end_time=stop_time)#, raw=True)
-    for _, msg, _ in iterator:
+    for _, msg, _ in sorted(iterator, key=lambda (topic, message, timestamp): message.header.stamp.to_sec()):
         time = msg.header.stamp
         times.append(time.to_sec())
-        size = (msg.width, msg.height)
     diffs = 1/np.diff(times)
     return np.median(diffs), min(diffs), max(diffs), size, times
 
@@ -48,9 +46,9 @@ def write_frames(bag, writer, total, topic=None, nframes=repeat(1), start_time=r
         cv2.namedWindow('win')
     count = 1
     iterator = bag.read_messages(topics=topic, start_time=start_time, end_time=stop_time)
-    for (topic, msg, time), reps in izip(iterator, nframes):
+    for (topic, msg, time), reps in izip(sorted(iterator, key=lambda (topic, message, timestamp): message.header.stamp.to_sec()), nframes):
         print '\rWriting frame %s of %s at time %s' % (count, total, time),
-        img = np.asarray(bridge.imgmsg_to_cv2(msg, 'bgr8'))
+        img = np.asarray(bridge.compressed_imgmsg_to_cv2(msg, 'bgr8'))
         for rep in range(reps):
             writer.write(img)
         imshow('win', img)
