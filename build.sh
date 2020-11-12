@@ -19,4 +19,9 @@ function run () {
   rm $INDEX.bag
 }
 
-run 2
+# run 2
+
+for i in $(seq 3 11)
+do
+  run $i
+done
